@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="128" fill="#010E2A"/>
+  <!-- Cylinder outline in CoolCredit Green -->
+  <path d="M192 120 C192 90, 320 90, 320 120" stroke="#22B974" stroke-width="24" stroke-linecap="round"/>
+  <rect x="236" y="60" width="40" height="40" rx="8" fill="#22B974"/>
+  <rect x="160" y="140" width="192" height="260" rx="48" stroke="#22B974" stroke-width="24" fill="#010E2A"/>
+  <!-- Leaf / Cool Credit swoosh -->
+  <path d="M220 280 C220 220, 292 220, 292 280 C292 320, 240 340, 220 280 Z" fill="#2ECD8A"/>
+  <!-- Base stand -->
+  <path d="M190 420 L322 420" stroke="#22B974" stroke-width="24" stroke-linecap="round"/>
+</svg>

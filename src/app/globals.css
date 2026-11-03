@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-navy: #010E2A;
+  --brand-green: #22B974;
+  --brand-bright-green: #2ECD8A;
+  --brand-dark-green: #16794C;
+  --brand-surface: #F4F4F6;
+  --brand-mint: #D1EBE0;
+  --brand-inactive: #A9B2C3;
+  --semantic-error: #B42318;
+  --semantic-warning: #B54708;
+  --semantic-info: #026AA2;
+  --semantic-success: #16794C;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--brand-surface);
+  color: #1a1a1a;
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom focus ring for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--brand-navy);
+  outline-offset: 2px;
+}
+
+/* Safe area padding helper */
+.safe-bottom-padding {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+.safe-tab-height {
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Brand Button Classes */
+.btn-primary {
+  background-color: var(--brand-green);
+  color: var(--brand-navy);
+  font-weight: 600;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: filter 0.15s ease-in-out;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #ffffff;
+  color: var(--brand-navy);
+  border: 1px solid #d1d5db;
+  font-weight: 600;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #f9fafb;
+}
+
+.btn-danger {
+  background-color: var(--semantic-error);
+  color: #ffffff;
+  font-weight: 600;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Print styling for certificates and reports */
+@media print {
+  nav,
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background-color: #ffffff !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+}

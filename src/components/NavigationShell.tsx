@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { translations, SupportedLanguage, LANGUAGE_NAMES } from '@/lib/i18n';
 import { getOfflineQueue, syncOfflineQueue } from '@/lib/offline-sync';
+import { AUTH_CHANGED_EVENT } from '@/lib/auth-events';
 
 interface UserSession {
   userId: string;
@@ -49,7 +50,7 @@ export default function NavigationShell({ children }: { children: React.ReactNod
   const t = translations[lang];
 
   // Fetch current session
-  const fetchSession = async () => {
+  const fetchSession = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/me');
       if (res.ok) {
@@ -61,11 +62,19 @@ export default function NavigationShell({ children }: { children: React.ReactNod
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchSession();
+    void fetchSession();
 
+    const handleAuthChange = () => {
+      void fetchSession();
+    };
+    window.addEventListener(AUTH_CHANGED_EVENT, handleAuthChange);
+    return () => window.removeEventListener(AUTH_CHANGED_EVENT, handleAuthChange);
+  }, [fetchSession]);
+
+  useEffect(() => {
     // Check online status
     if (typeof window !== 'undefined') {
       setIsOnline(navigator.onLine);
@@ -138,36 +147,6 @@ export default function NavigationShell({ children }: { children: React.ReactNod
     await fetch('/api/auth/logout', { method: 'POST' });
     setCurrentUser(null);
     router.push('/login');
-  };
-
-  // Switch demo user helper
-  const handleQuickLogin = async (email: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password:
-            email === 'admin@coolcredit.ng'
-              ? 'AdminPass123!'
-              : email === 'operator@coolcredit.ng'
-              ? 'OperatorPass123!'
-              : email.startsWith('tech')
-              ? 'TechPass123!'
-              : email.startsWith('regulator')
-              ? 'RegulatorPass123!'
-              : 'FunderPass123!',
-        }),
-      });
-      if (res.ok) {
-        await fetchSession();
-        router.refresh();
-      }
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Tabs configured strictly per Section 9:
@@ -358,37 +337,6 @@ export default function NavigationShell({ children }: { children: React.ReactNod
               ))}
             </select>
           </div>
-
-          {/* Quick Role Tester (Section 5 Testing Helper) */}
-          <div className="pt-2 text-[11px] text-[#A9B2C3]">
-            <p className="font-semibold text-white mb-1.5">Quick Switch Account:</p>
-            <div className="grid grid-cols-2 gap-1 text-[10px]">
-              <button
-                onClick={() => handleQuickLogin('tech1@coolcredit.ng')}
-                className="bg-white/5 hover:bg-white/10 p-1 rounded text-left truncate text-[#2ECD8A]"
-              >
-                Tech (Musa)
-              </button>
-              <button
-                onClick={() => handleQuickLogin('operator@coolcredit.ng')}
-                className="bg-white/5 hover:bg-white/10 p-1 rounded text-left truncate text-[#2ECD8A]"
-              >
-                Operator (Fatima)
-              </button>
-              <button
-                onClick={() => handleQuickLogin('admin@coolcredit.ng')}
-                className="bg-white/5 hover:bg-white/10 p-1 rounded text-left truncate text-[#2ECD8A]"
-              >
-                Admin (Lead)
-              </button>
-              <button
-                onClick={() => handleQuickLogin('regulator@noo.gov.ng')}
-                className="bg-white/5 hover:bg-white/10 p-1 rounded text-left truncate text-[#2ECD8A]"
-              >
-                Regulator (NOO)
-              </button>
-            </div>
-          </div>
         </div>
       </aside>
 
@@ -396,7 +344,7 @@ export default function NavigationShell({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col min-w-0 pb-20 md:pb-6">
         {/* TOP MOBILE BAR & HONEST STATUS BANNER */}
         <header className="bg-[#010E2A] text-white px-4 py-2.5 flex items-center justify-between border-b border-[#010E2A]/20 md:hidden sticky top-0 z-40">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded bg-[#22B974] flex items-center justify-center font-black text-sm text-[#010E2A]">
               CC
             </div>
@@ -408,13 +356,62 @@ export default function NavigationShell({ children }: { children: React.ReactNod
             </div>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Offline indicator */}
+            {!isOnline && (
+              <span className="bg-[#B54708] text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
+                <WifiOff className="w-3 h-3" /> Offline
+              </span>
+            )}
+            {offlineCount > 0 && isOnline && (
+              <button
+                onClick={handleSync}
+                className="bg-[#22B974] text-[#010E2A] text-[10px] font-bold px-2 py-0.5 rounded shrink-0"
+              >
+                Sync ({offlineCount})
+              </button>
+            )}
+
+            {/* Mobile user chip — shows who is logged in */}
+            {currentUser ? (
+              <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-2 py-1 min-w-0">
+                {/* Avatar initial */}
+                <div className="w-6 h-6 rounded-full bg-[#22B974] flex items-center justify-center font-bold text-[11px] text-[#010E2A] shrink-0">
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </div>
+                {/* Name + role */}
+                <div className="min-w-0 hidden xs:block">
+                  <p className="text-[11px] font-semibold text-white leading-tight truncate max-w-[80px]">
+                    {currentUser.name.split(' ')[0]}
+                  </p>
+                  <p className="text-[9px] text-[#2ECD8A] uppercase font-semibold leading-tight">
+                    {t.roles[currentUser.role]}
+                  </p>
+                </div>
+                {/* Logout button */}
+                <button
+                  onClick={handleLogout}
+                  aria-label="Sign out"
+                  className="ml-1 text-[#FDA29B] hover:text-white shrink-0 p-0.5 rounded hover:bg-red-900/40 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="text-[11px] font-bold text-[#22B974] border border-[#22B974]/40 px-2 py-1 rounded-lg hover:bg-[#22B974]/10 transition-colors shrink-0"
+              >
+                Sign In
+              </Link>
+            )}
+
             {/* Language dropdown mobile */}
             <select
               value={lang}
               onChange={(e) => handleLanguageChange(e.target.value as SupportedLanguage)}
               aria-label="Select Language"
-              className="bg-white/10 text-white text-[11px] rounded px-1.5 py-1 border border-white/20"
+              className="bg-white/10 text-white text-[11px] rounded px-1.5 py-1 border border-white/20 shrink-0"
             >
               {(Object.keys(LANGUAGE_NAMES) as SupportedLanguage[]).map((code) => (
                 <option key={code} value={code} className="bg-[#010E2A] text-white">
@@ -422,21 +419,6 @@ export default function NavigationShell({ children }: { children: React.ReactNod
                 </option>
               ))}
             </select>
-
-            {/* Offline indicator */}
-            {!isOnline && (
-              <span className="bg-[#B54708] text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                <WifiOff className="w-3 h-3" /> Offline
-              </span>
-            )}
-            {offlineCount > 0 && isOnline && (
-              <button
-                onClick={handleSync}
-                className="bg-[#22B974] text-[#010E2A] text-[10px] font-bold px-2 py-0.5 rounded"
-              >
-                Sync ({offlineCount})
-              </button>
-            )}
           </div>
         </header>
 
@@ -445,7 +427,7 @@ export default function NavigationShell({ children }: { children: React.ReactNod
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-[#B54708] shrink-0" />
             <span>
-              <strong>Pilot Notice:</strong> Lokoja operations in prep. Quantro CAC registration in progress; NOO proposal submitted 27 Oct 2026 (unapproved). ₦4,500/kg configurable pilot rate paid only after physical verification. No fake payouts or unverified carbon claims.
+              <strong>Pilot Notice:</strong> ₦4,500/kg configurable pilot rate paid only after physical verification. No fake payouts or unverified carbon claims.
             </span>
           </div>
         </div>

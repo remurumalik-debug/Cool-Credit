@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { UserPlus, Lock, Mail, Phone, Building, MapPin, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { notifyAuthChanged } from '@/lib/auth-events';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -72,6 +73,7 @@ export default function RegisterPage() {
         throw new Error(data.error || 'Registration failed');
       }
 
+      notifyAuthChanged();
       router.push('/');
       router.refresh();
     } catch (err: any) {

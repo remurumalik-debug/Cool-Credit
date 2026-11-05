@@ -1,6 +1,7 @@
 import { MongoClient, Db } from 'mongodb';
 
 const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/coolcredit';
+const dbName = process.env.MONGODB_DB_NAME || 'coolcredit';
 const options = {};
 
 let client: MongoClient;
@@ -26,7 +27,7 @@ export default clientPromise;
 
 export async function getDb(): Promise<Db> {
   const connectedClient = await clientPromise;
-  return connectedClient.db();
+  return connectedClient.db(dbName);
 }
 
 /**

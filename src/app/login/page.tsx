@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ShieldCheck, Lock, Mail, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Lock, Mail, AlertTriangle } from 'lucide-react';
+import { notifyAuthChanged } from '@/lib/auth-events';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,6 +30,8 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
+      notifyAuthChanged();
+
       // Route based on role
       if (data.user.role === 'technician') {
         router.push('/');
@@ -45,11 +48,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickDemo = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
   };
 
   return (
@@ -122,61 +120,6 @@ export default function LoginPage() {
         </p>
       </form>
 
-      {/* QUICK ROLE SELECTOR (FOR SEAMLESS TESTING PER SECTION 5) */}
-      <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-3">
-        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-500">
-          Demo Accounts (One-Click Auto-Fill)
-        </h3>
-        <div className="space-y-1.5 text-xs">
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('tech1@coolcredit.ng', 'TechPass123!')}
-            className="w-full text-left p-2 rounded-lg bg-[#F4F4F6] hover:bg-gray-200 transition-colors flex justify-between items-center"
-          >
-            <div>
-              <span className="font-bold text-[#010E2A]">Musa Ibrahim</span>
-              <span className="text-gray-500 block text-[11px]">Certified RAC Technician</span>
-            </div>
-            <span className="text-[10px] font-bold text-[#16794C]">Auto-Fill</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('operator@coolcredit.ng', 'OperatorPass123!')}
-            className="w-full text-left p-2 rounded-lg bg-[#F4F4F6] hover:bg-gray-200 transition-colors flex justify-between items-center"
-          >
-            <div>
-              <span className="font-bold text-[#010E2A]">Fatima Bello</span>
-              <span className="text-gray-500 block text-[11px]">Collection Point Operator</span>
-            </div>
-            <span className="text-[10px] font-bold text-[#16794C]">Auto-Fill</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('admin@coolcredit.ng', 'AdminPass123!')}
-            className="w-full text-left p-2 rounded-lg bg-[#F4F4F6] hover:bg-gray-200 transition-colors flex justify-between items-center"
-          >
-            <div>
-              <span className="font-bold text-[#010E2A]">Dr. Aliyu Mohammed</span>
-              <span className="text-gray-500 block text-[11px]">Quantro Programme Admin</span>
-            </div>
-            <span className="text-[10px] font-bold text-[#16794C]">Auto-Fill</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('regulator@noo.gov.ng', 'RegulatorPass123!')}
-            className="w-full text-left p-2 rounded-lg bg-[#F4F4F6] hover:bg-gray-200 transition-colors flex justify-between items-center"
-          >
-            <div>
-              <span className="font-bold text-[#010E2A]">National Ozone Officer</span>
-              <span className="text-gray-500 block text-[11px]">Regulator (Read-Only)</span>
-            </div>
-            <span className="text-[10px] font-bold text-[#16794C]">Auto-Fill</span>
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

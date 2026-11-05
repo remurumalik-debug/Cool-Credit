@@ -63,14 +63,16 @@ The platform includes seed data populated via `npm run seed`:
    ```
 
 2. **Configure Environment Variables:**
-   Copy `.env.local.example` to `.env.local` (pre-configured for local MongoDB):
+   Create `.env.local` in the project root. For Atlas, set `MONGODB_URI` to the connection string from Atlas and keep `MONGODB_DB_NAME=coolcredit`:
    ```env
-   MONGODB_URI=mongodb://127.0.0.1:27017/coolcredit
-   JWT_SECRET=coolcredit_super_secure_jwt_secret_dev_2026_pilot_lokoja
+   MONGODB_URI=mongodb+srv://<database-user>:<password>@<cluster-host>/?retryWrites=true&w=majority
+   MONGODB_DB_NAME=coolcredit
+   JWT_SECRET=<generate-a-random-secret-at-least-32-characters-long>
    DEFAULT_PAYOUT_RATE_KOBO=450000
    VARIANCE_THRESHOLD_PCT=20
    NEXT_PUBLIC_APP_URL=http://localhost:3000
    ```
+   Replace the JWT placeholder with a unique random secret; do not use the placeholder literally. In Atlas, grant the database user read/write access to `coolcredit` and allow your app's server IP in Network Access. Keep the actual URI and credentials only in `.env.local` or your deployment's secret settings; URL-encode special characters in the username or password.
 
 3. **Seed Database with Demo Data:**
    ```bash

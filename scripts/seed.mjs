@@ -1,5 +1,9 @@
+import nextEnv from '@next/env';
 import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
+
+const { loadEnvConfig } = nextEnv;
+loadEnvConfig(process.cwd());
 
 const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/coolcredit';
 
@@ -7,7 +11,7 @@ async function seed() {
   console.log('Connecting to MongoDB at:', uri);
   const client = new MongoClient(uri);
   await client.connect();
-  const db = client.db();
+  const db = client.db(process.env.MONGODB_DB_NAME || 'coolcredit');
 
   console.log('Clearing existing demo collections...');
   await db.collection('users').deleteMany({});
@@ -402,6 +406,16 @@ async function seed() {
     },
     beforeAfterSummary: 'Database initialized with verified demo data.',
   });
+
+  console.log('Ensuring unique database indexes...');
+  await db.collection('users').createIndex({ email: 1 }, { unique: true });
+  await db.collection('recoveries').createIndex({ code: 1 }, { unique: true });
+  await db.collection('recoveries').createIndex({ status: 1, createdAt: -1 });
+  await db.collection('recoveries').createIndex({ techId: 1, createdAt: -1 });
+  await db.collection('payouts').createIndex({ recId: 1 }, { unique: true });
+  await db.collection('payouts').createIndex({ status: 1, createdAt: -1 });
+  await db.collection('payouts').createIndex({ techId: 1, createdAt: -1 });
+  await db.collection('auditLog').createIndex({ at: -1 });
 
   console.log('Seed completed successfully!');
   await client.close();

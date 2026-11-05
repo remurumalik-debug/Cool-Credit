@@ -77,7 +77,7 @@ async function runTestSuite() {
   console.log('\nTEST SUITE 3: MongoDB State Machine & Guarded Updates');
   const client = new MongoClient(uri);
   await client.connect();
-  const db = client.db();
+  const db = client.db(process.env.MONGODB_DB_NAME || 'coolcredit');
 
   try {
     const testCode = `TEST-CYL-${Date.now()}`;

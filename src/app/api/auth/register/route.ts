@@ -1,7 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, ensureIndexes } from '@/lib/db';
-import { hashPassword, createToken, setSessionCookie, checkRateLimit } from '@/lib/auth';
+import { getDb, ensureIndexes, MongoConfigurationError } from '@/lib/db';
+import {
+  assertAuthConfiguration,
+  hashPassword,
+  createToken,
+  setSessionCookie,
+  checkRateLimit,
+} from '@/lib/auth';
 import { recordAudit } from '@/lib/audit';
+
+function logRegistrationFailure(err: unknown): void {
+  if (err instanceof Error) {
+    const code = 'code' in err && (typeof err.code === 'string' || typeof err.code === 'number')
+      ? err.code
+      : undefined;
+    console.error('Registration request failed', { name: err.name, code });
+    return;
+  }
+
+  console.error('Registration request failed', { name: 'UnknownError' });
+}
+
+function getRegistrationFailureMessage(err: unknown): string {
+  if (err instanceof MongoConfigurationError) {
+    return 'The database configuration is invalid. Check MONGODB_URI and MONGODB_DB_NAME.';
+  }
+
+  const name = err instanceof Error ? err.name : '';
+  const code =
+    err && typeof err === 'object' && 'code' in err ? err.code : undefined;
+
+  if (name === 'MongoParseError') {
+    return 'The database connection settings are invalid. Please contact the administrator.';
+  }
+  if (name === 'MongoServerSelectionError' || name === 'MongoNetworkError') {
+    return 'The database is unreachable. Please try again later or contact the administrator.';
+  }
+  if (name === 'MongoServerError' && (code === 18 || code === 8000)) {
+    return 'The database rejected its credentials. Please contact the administrator.';
+  }
+  return 'Registration is temporarily unavailable. Check the server configuration and try again.';
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,15 +52,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
-    const { name, email, password, phone, bankName, accountNumber, location, consent } = body;
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Request body must be valid JSON.' }, { status: 400 });
+    }
+
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Registration details are required.' }, { status: 400 });
+    }
+
+    const { name, email, password, phone, bankName, accountNumber, location, consent } =
+      body as Record<string, unknown>;
 
     // Strict validation
     if (!name || typeof name !== 'string' || name.trim().length < 3) {
       return NextResponse.json({ error: 'Full name is required (minimum 3 characters).' }, { status: 400 });
     }
 
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
+    if (
+      !email ||
+      typeof email !== 'string' ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
       return NextResponse.json({ error: 'A valid email address is required.' }, { status: 400 });
     }
 
@@ -41,15 +95,29 @@ export async function POST(req: NextRequest) {
     }
 
     // Bank validation for technicians
-    if (accountNumber && !/^\d{10}$/.test(accountNumber.trim())) {
+    if (
+      accountNumber &&
+      (typeof accountNumber !== 'string' || !/^\d{10}$/.test(accountNumber.trim()))
+    ) {
       return NextResponse.json({ error: 'Nigerian NUBAN account number must be exactly 10 digits.' }, { status: 400 });
+    }
+
+    try {
+      assertAuthConfiguration();
+    } catch {
+      console.error('Registration unavailable: JWT_SECRET is missing or shorter than 32 characters.');
+      return NextResponse.json(
+        { error: 'Registration is not configured on the server. Please contact the administrator.' },
+        { status: 503 }
+      );
     }
 
     await ensureIndexes();
     const db = await getDb();
+    const normalizedEmail = email.trim().toLowerCase();
 
     // Check if email already registered
-    const existing = await db.collection('users').findOne({ email: email.toLowerCase().trim() });
+    const existing = await db.collection('users').findOne({ email: normalizedEmail });
     if (existing) {
       return NextResponse.json({ error: 'An account with this email address already exists.' }, { status: 409 });
     }
@@ -59,15 +127,15 @@ export async function POST(req: NextRequest) {
 
     const newUser = {
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       phone: phone.trim(),
       role: 'technician' as const, // Technicians self-register; staff roles are never self-selected
       hash,
       bank: {
-        bankName: bankName?.trim() || '',
-        accountNumber: accountNumber?.trim() || '',
+        bankName: typeof bankName === 'string' ? bankName.trim() : '',
+        accountNumber: typeof accountNumber === 'string' ? accountNumber.trim() : '',
       },
-      location: location?.trim() || 'Lokoja, Kogi State',
+      location: typeof location === 'string' ? location.trim() || 'Lokoja, Kogi State' : 'Lokoja, Kogi State',
       active: true,
       eligible: false, // Per Section 6.6: Ineligible until admin verifies training/certification
       consentAt: now,
@@ -104,8 +172,18 @@ export async function POST(req: NextRequest) {
 
     setSessionCookie(response, token);
     return response;
-  } catch (err: any) {
-    console.error('Registration error:', err);
-    return NextResponse.json({ error: 'An error occurred during registration. Please try again.' }, { status: 500 });
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'code' in err && err.code === 11000) {
+      return NextResponse.json(
+        { error: 'An account with this email address already exists.' },
+        { status: 409 }
+      );
+    }
+
+    logRegistrationFailure(err);
+    return NextResponse.json(
+      { error: getRegistrationFailureMessage(err) },
+      { status: 503 }
+    );
   }
 }

@@ -70,10 +70,10 @@ The authentication demo accounts below are created or refreshed by `npm run seed
    JWT_SECRET=<generate-a-random-secret-at-least-32-characters-long>
    DEFAULT_PAYOUT_RATE_KOBO=450000
    VARIANCE_THRESHOLD_PCT=20
-   NEXT_PUBLIC_APP_URL=https://your-public-app-domain
+   NEXT_APP_URL=https://your-public-app-domain
    ```
    Replace the JWT placeholder with a unique random secret; do not use the placeholder literally. In Atlas, grant the database user read/write access to `coolcredit` and allow your app's server IP in Network Access. Keep the actual URI and credentials only in `.env.local` or your deployment's secret settings; URL-encode special characters in the username or password.
-   The application and all database scripts require an Atlas `mongodb+srv://` URI. There is no local MongoDB fallback. Atlas hosts the database, not the Next.js web application, so deploy the Next.js app to a web host and set `NEXT_PUBLIC_APP_URL` to that hosted app's public URL. Use a localhost URL only when intentionally running the web app locally during development; production QR codes reject localhost URLs.
+   The application and all database scripts require an Atlas `mongodb+srv://` URI. There is no local MongoDB fallback. Atlas hosts the database, not the Next.js web application, so deploy the Next.js app to a web host and set `NEXT_APP_URL` to that hosted app's public URL. Use a localhost URL only when intentionally running the web app locally during development; production QR codes reject localhost URLs.
 
 3. **Seed the four authentication accounts:**
    ```bash

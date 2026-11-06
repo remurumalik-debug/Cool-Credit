@@ -1,8 +1,9 @@
 import { MongoClient, ObjectId } from 'mongodb';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { getAtlasConfig } from './mongo-config.mjs';
 
-const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/coolcredit';
+const { uri, dbName } = getAtlasConfig();
 const JWT_SECRET = process.env.JWT_SECRET || 'coolcredit_dev_jwt_secret_lokoja_pilot';
 
 let totalTests = 0;
@@ -77,7 +78,7 @@ async function runTestSuite() {
   console.log('\nTEST SUITE 3: MongoDB State Machine & Guarded Updates');
   const client = new MongoClient(uri);
   await client.connect();
-  const db = client.db(process.env.MONGODB_DB_NAME || 'coolcredit');
+  const db = client.db(dbName);
 
   try {
     const testCode = `TEST-CYL-${Date.now()}`;

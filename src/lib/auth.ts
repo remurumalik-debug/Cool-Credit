@@ -4,8 +4,25 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { UserRole } from './types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'coolcredit_dev_jwt_secret_lokoja_pilot';
 const COOKIE_NAME = 'coolcredit_session';
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET?.trim();
+
+  if (!secret || secret.length < 32) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET must be configured with at least 32 characters in production.');
+    }
+
+    return 'coolcredit_dev_jwt_secret_lokoja_pilot';
+  }
+
+  return secret;
+}
+
+export function assertAuthConfiguration(): void {
+  getJwtSecret();
+}
 
 export interface SessionPayload {
   userId: string;
@@ -47,12 +64,12 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function createToken(payload: SessionPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: '7d' });
 }
 
 export function verifyToken(token: string): SessionPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as SessionPayload;
+    return jwt.verify(token, getJwtSecret()) as SessionPayload;
   } catch {
     return null;
   }
@@ -99,6 +116,7 @@ export function clearSessionCookie(res: NextResponse): void {
     name: COOKIE_NAME,
     value: '',
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
     maxAge: 0,

@@ -1,19 +1,17 @@
-import nextEnv from '@next/env';
 import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
+import { getAtlasConfig } from './mongo-config.mjs';
 
-const { loadEnvConfig } = nextEnv;
-loadEnvConfig(process.cwd());
-
-const uri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DB_NAME || 'coolcredit';
-
-if (!uri) {
-  console.error('MONGODB_URI not set');
+let uri;
+let dbName;
+try {
+  ({ uri, dbName } = getAtlasConfig());
+} catch (error) {
+  console.error(error instanceof Error ? error.message : 'Invalid MongoDB Atlas configuration.');
   process.exit(1);
 }
 
-const client = new MongoClient(uri, { serverSelectionTimeoutMS: 8000 });
+const client = new MongoClient(uri);
 
 async function run() {
   await client.connect();
@@ -45,7 +43,7 @@ async function run() {
     const knownPass = passwordMap[u.email];
     if (knownPass && u.hash) {
       const valid = await bcrypt.compare(knownPass, u.hash);
-      console.log(`  Password "${knownPass}" matches hash: ${valid ? '✅ YES' : '❌ NO'}`);
+      console.log(`  Seeded credential matches hash: ${valid ? 'yes' : 'no'}`);
     }
     console.log('');
   }

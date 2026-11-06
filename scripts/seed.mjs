@@ -1,17 +1,27 @@
-import nextEnv from '@next/env';
 import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
+import { getAtlasConfig } from './mongo-config.mjs';
 
-const { loadEnvConfig } = nextEnv;
-loadEnvConfig(process.cwd());
+if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DESTRUCTIVE_DEMO_SEED !== 'yes') {
+  console.error(
+    'This legacy demo seed clears collections. It is disabled by default; use npm run seed to safely seed only the four authentication accounts.'
+  );
+  process.exit(1);
+}
 
-const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/coolcredit';
+let uri;
+let dbName;
+try {
+  ({ uri, dbName } = getAtlasConfig());
+} catch (error) {
+  console.error(error instanceof Error ? error.message : 'Invalid MongoDB Atlas configuration.');
+  process.exit(1);
+}
 
 async function seed() {
-  console.log('Connecting to MongoDB at:', uri);
   const client = new MongoClient(uri);
   await client.connect();
-  const db = client.db(process.env.MONGODB_DB_NAME || 'coolcredit');
+  const db = client.db(dbName);
 
   console.log('Clearing existing demo collections...');
   await db.collection('users').deleteMany({});

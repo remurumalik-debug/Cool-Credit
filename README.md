@@ -75,13 +75,29 @@ The authentication demo accounts below are created or refreshed by `npm run seed
    Replace the JWT placeholder with a unique random secret; do not use the placeholder literally. In Atlas, grant the database user read/write access to `coolcredit` and allow your app's server IP in Network Access. Keep the actual URI and credentials only in `.env.local` or your deployment's secret settings; URL-encode special characters in the username or password.
    The application and all database scripts require an Atlas `mongodb+srv://` URI. There is no local MongoDB fallback. Atlas hosts the database, not the Next.js web application, so deploy the Next.js app to a web host and set `NEXT_APP_URL` to that hosted app's public URL. Use a localhost URL only when intentionally running the web app locally during development; production QR codes reject localhost URLs.
 
-3. **Seed the four authentication accounts:**
+3. **Seed the six authentication accounts:**
    ```bash
    npm run seed
    ```
    This command requires a valid Atlas `MONGODB_URI`, connects to the `coolcredit` database, and upserts the six listed accounts with bcrypt password hashes. It verifies every account's password hash and role, without deleting users or other collections. Set the same `MONGODB_URI`, `MONGODB_DB_NAME=coolcredit`, and a persistent `JWT_SECRET` in your hosting provider before deploying. Never paste the Atlas URI into chat or commit it.
 
    The former full demo-data seed script is destructive and is disabled by default. Do not enable it against production; it is not needed to create or repair these login accounts.
+
+### Vercel authentication setup and troubleshooting
+
+The login form calls `/api/auth/login` on the current site, so changing hard-coded site URLs is not required for authentication. In the Vercel project, add these environment variables for the deployment environment you use (Production, Preview, or both):
+
+- `MONGODB_URI`: the Atlas connection string for the database that contains the users.
+- `MONGODB_DB_NAME`: `coolcredit`.
+- `JWT_SECRET`: a private, persistent random secret of at least 32 characters. Keep it unchanged between deployments so existing sessions remain valid.
+
+Save the variables and redeploy; changing Vercel environment variables does not update an already-built deployment. `NEXT_APP_URL` is used for generated public links such as QR codes, not for login API requests.
+
+Seed users into the same Atlas cluster and `coolcredit` database used by Vercel. For example, configure the local seed command with that cluster's `MONGODB_URI`, then run `npm run seed`; it updates the six documented demo accounts. If login reports invalid credentials, confirm the account exists in that database, is active, and that the email/password are correct.
+
+Atlas must allow connections from the deployed app. Prefer Vercel static egress or private networking and allowlist only the required addresses. If your Vercel plan does not provide fixed egress and you choose to allow `0.0.0.0/0` in Atlas, understand that this exposes the database endpoint to connection attempts from any IP; use a strong unique database password and a least-privilege database user.
+
+The login page displays API errors and HTTP status codes. A `503` indicates missing/invalid server configuration or an unreachable database; check the Vercel Function logs and confirm the three variables above and Atlas Network Access. A `401` means the email/password do not match a valid account in the configured database. Do not share environment variable values or database credentials when requesting help.
 
 4. **Run the Automated Test Suite:**
    ```bash

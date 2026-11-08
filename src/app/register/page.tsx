@@ -52,8 +52,9 @@ export default function RegisterPage() {
 
     setLoading(true);
 
+    let res: Response;
     try {
-      const res = await fetch('/api/auth/register', {
+      res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,17 +68,42 @@ export default function RegisterPage() {
           consent,
         }),
       });
+    } catch {
+      setError('Could not reach the registration service. Check your connection and try again.');
+      setLoading(false);
+      return;
+    }
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
+    let data: unknown;
+    try {
+      data = await res.json();
+    } catch {
+      setError(`The registration service returned an invalid response (HTTP ${res.status}). Please check the deployment and try again.`);
+      setLoading(false);
+      return;
+    }
 
+    const responseData =
+      data && typeof data === 'object' && !Array.isArray(data)
+        ? (data as Record<string, unknown>)
+        : {};
+
+    if (!res.ok) {
+      setError(
+        typeof responseData.error === 'string'
+          ? responseData.error
+          : `Registration failed (HTTP ${res.status}). Please try again.`
+      );
+      setLoading(false);
+      return;
+    }
+
+    try {
       notifyAuthChanged();
       router.push('/');
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unable to complete registration. Please try again.');
     } finally {
       setLoading(false);
     }

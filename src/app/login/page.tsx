@@ -18,33 +18,72 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
+    let res: Response;
     try {
-      const res = await fetch('/api/auth/login', {
+      res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
       });
+    } catch {
+      setError('Could not reach the sign-in service. Check your connection and try again.');
+      setLoading(false);
+      return;
+    }
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
+    let data: unknown;
+    try {
+      data = await res.json();
+    } catch {
+      setError(`The sign-in service returned an invalid response (HTTP ${res.status}). Please check the deployment and try again.`);
+      setLoading(false);
+      return;
+    }
 
+    const responseData =
+      data && typeof data === 'object' && !Array.isArray(data)
+        ? (data as Record<string, unknown>)
+        : {};
+
+    if (!res.ok) {
+      setError(
+        typeof responseData.error === 'string'
+          ? responseData.error
+          : `Sign-in failed (HTTP ${res.status}). Please try again.`
+      );
+      setLoading(false);
+      return;
+    }
+
+    const user =
+      responseData.user &&
+      typeof responseData.user === 'object' &&
+      !Array.isArray(responseData.user)
+        ? (responseData.user as Record<string, unknown>)
+        : null;
+
+    if (!user || typeof user.role !== 'string') {
+      setError('The sign-in service returned an unexpected response. Please try again.');
+      setLoading(false);
+      return;
+    }
+
+    try {
       notifyAuthChanged();
 
       // Route based on role
-      if (data.user.role === 'technician') {
+      if (user.role === 'technician') {
         router.push('/');
-      } else if (data.user.role === 'operator') {
+      } else if (user.role === 'operator') {
         router.push('/queue');
-      } else if (data.user.role === 'admin') {
+      } else if (user.role === 'admin') {
         router.push('/admin');
       } else {
         router.push('/reports');
       }
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unable to complete sign-in. Please try again.');
     } finally {
       setLoading(false);
     }
